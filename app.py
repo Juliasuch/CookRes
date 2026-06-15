@@ -6,7 +6,7 @@ from src.data import (
     add_fridge_item,
     build_shopping_list,
     delete_fridge_item,
-    get_or_create_user,
+    find_user_by_email,
     list_fridge_items,
     list_ingredients,
     list_recipes,
@@ -30,17 +30,21 @@ def require_user() -> dict[str, str] | None:
         st.caption("Выбери рецепты, проверь холодильник и собери список покупок.")
 
         email = st.text_input("Email", placeholder="you@example.com")
-        name = st.text_input("Имя", placeholder="Юлия")
 
         if not email:
             st.info("Введите email, чтобы открыть свои рецепты, холодильник и список покупок.")
             return None
 
         try:
-            user = get_or_create_user(email=email, name=name)
+            user = find_user_by_email(email=email)
         except Exception as error:
             st.error("Не получилось подключиться к Supabase.")
             st.caption(str(error))
+            return None
+
+        if not user:
+            st.warning("Пользователь с таким email не найден.")
+            st.caption("Сначала добавьте пользователя в таблицу app_users в Supabase.")
             return None
 
         st.success(f"Профиль: {user.get('name') or user['email']}")

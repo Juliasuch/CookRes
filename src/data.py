@@ -85,7 +85,7 @@ def list_ingredients() -> list[dict[str, Any]]:
     )
 
 
-def get_or_create_user(email: str, name: str | None = None) -> dict[str, Any]:
+def find_user_by_email(email: str) -> dict[str, Any] | None:
     supabase = get_supabase()
     existing = _rows(
         supabase.table("app_users")
@@ -96,14 +96,7 @@ def get_or_create_user(email: str, name: str | None = None) -> dict[str, Any]:
     )
     if existing:
         return existing[0]
-
-    created = supabase.table("app_users").insert(
-        {
-            "email": email.strip().lower(),
-            "name": name.strip() if name else None,
-        }
-    ).execute()
-    return created.data[0]
+    return None
 
 
 def list_fridge_items(user_id: str) -> list[dict[str, Any]]:
