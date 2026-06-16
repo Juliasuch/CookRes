@@ -87,10 +87,11 @@ def list_ingredients() -> list[dict[str, Any]]:
 
 def find_user_by_email(email: str) -> dict[str, Any] | None:
     supabase = get_supabase()
+    normalized_email = email.strip()
     existing = _rows(
         supabase.table("app_users")
         .select("id,name,email")
-        .eq("email", email.strip().lower())
+        .ilike("email", normalized_email)
         .limit(1)
         .execute()
     )
@@ -146,18 +147,10 @@ def list_saved_recipe_ids(user_id: str) -> set[str]:
 
 def save_recipe(user_id: str, recipe_id: str) -> None:
     supabase = get_supabase()
-    exists = _rows(
-        supabase.table("user_recipes")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("recipe_id", recipe_id)
-        .limit(1)
-        .execute()
-    )
-    if not exists:
-        supabase.table("user_recipes").insert(
-            {"user_id": user_id, "recipe_id": recipe_id}
-        ).execute()
+    supabase.table("user_recipes").upsert(
+        {"user_id": user_id, "recipe_id": recipe_id},
+        on_conflict="user_id,recipe_id",
+    ).execute()
 
 
 def unsave_recipe(user_id: str, recipe_id: str) -> None:

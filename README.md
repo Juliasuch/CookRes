@@ -5,7 +5,7 @@ Streamlit-приложение для рецептов на Supabase.
 ## Что уже заложено
 
 - 4 вкладки: все рецепты, мои рецепты, мой холодильник, мой список покупок.
-- Подключение к Supabase через `SUPABASE_URL` и `SUPABASE_ANON_KEY`.
+- Подключение к Supabase через `SUPABASE_URL` и `SUPABASE_PUBLISHABLE_KEY`.
 - Работа с текущими таблицами: `recipes`, `ingredients`, `recipe_ingredients`, `app_users`, `user_fridge_ingredients`, `user_recipes`.
 - Автоматический список покупок: ингредиенты из выбранных рецептов минус продукты в холодильнике.
 
@@ -46,7 +46,64 @@ to anon, authenticated
 using (true);
 ```
 
-Для пользовательских таблиц лучше добавить авторизацию Supabase Auth. Сейчас приложение использует email как простой прототипный профиль.
+Сейчас приложение использует прототипный режим без пароля: пользователь вводит email, приложение ищет его в `app_users`, а затем использует `app_users.id` как `user_id`. Поэтому для Supabase такие запросы идут от роли `anon`, а не от `authenticated`, и policies через `auth.uid()` работать не будут.
+
+Для такого учебного прототипа можно использовать более открытые policies:
+
+```sql
+alter table app_users enable row level security;
+alter table user_recipes enable row level security;
+alter table user_fridge_ingredients enable row level security;
+
+create policy "Prototype users are readable"
+on app_users for select
+to anon, authenticated
+using (true);
+
+create policy "Prototype selected recipes are readable"
+on user_recipes for select
+to anon, authenticated
+using (true);
+
+create policy "Prototype selected recipes are writable"
+on user_recipes for insert
+to anon, authenticated
+with check (
+  exists (
+    select 1
+    from app_users
+    where app_users.id = user_recipes.user_id
+  )
+);
+
+create policy "Prototype selected recipes are removable"
+on user_recipes for delete
+to anon, authenticated
+using (true);
+
+create policy "Prototype fridge is readable"
+on user_fridge_ingredients for select
+to anon, authenticated
+using (true);
+
+create policy "Prototype fridge is writable"
+on user_fridge_ingredients for insert
+to anon, authenticated
+with check (
+  exists (
+    select 1
+    from app_users
+    where app_users.id = user_fridge_ingredients.user_id
+  )
+);
+
+create policy "Prototype fridge is removable"
+on user_fridge_ingredients for delete
+to anon, authenticated
+using (true);
+```
+
+Это удобно для демо и учебного проекта, но не является приватной авторизацией: любой человек, знающий email, сможет открыть данные этого профиля. Для публичной версии лучше перейти на Supabase Auth или magic link.
 
 ## Логика вкладок
 
